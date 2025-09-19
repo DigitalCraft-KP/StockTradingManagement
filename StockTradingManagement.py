@@ -634,6 +634,7 @@ def create_html_file():
             <div class="form-title">새 주식 추가</div>
             <div class="form-row">
                 <input type="text" id="stockName" class="form-input" placeholder="주식 이름" />
+                <input type="text" id="stockCode" class="form-input" placeholder="종목 코드" />
                 <input type="number" id="purchasePrice" class="form-input" placeholder="매입가" />
                 <button class="btn btn-success" onclick="addStock()">추가</button>
                 <button class="btn btn-secondary" onclick="toggleAddForm()">취소</button>
@@ -645,6 +646,7 @@ def create_html_file():
                 <thead>
                     <tr>
                         <th>주식 이름</th>
+                        <th>종목 코드</th>
                         <th class="text-right">매입가</th>
                         <th class="text-right">현재가</th>
                         <th class="text-right">고점</th>
@@ -698,9 +700,15 @@ def create_html_file():
                 }
             });
             
-            document.getElementById('stockName').addEventListener('keypress', function(e) {
+            document.getElementById('stockCode').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     document.getElementById('purchasePrice').focus();
+                }
+            });
+
+            document.getElementById('stockName').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('stockCode').focus();
                 }
             });
             
@@ -941,6 +949,7 @@ def create_html_file():
                 document.getElementById('stockName').focus();
             } else {
                 document.getElementById('stockName').value = '';
+                document.getElementById('stockCode').value = '';
                 document.getElementById('purchasePrice').value = '';
             }
         }
@@ -948,16 +957,18 @@ def create_html_file():
         // 주식 추가
         function addStock() {
             const name = document.getElementById('stockName').value.trim();
+            const code = document.getElementById('stockCode').value.trim();
             const purchasePrice = parseInt(document.getElementById('purchasePrice').value);
 
-            if (!name || !purchasePrice || purchasePrice <= 0) {
-                alert('주식 이름과 매입가를 올바르게 입력해주세요.');
+            if (!name || !code || !purchasePrice || purchasePrice <= 0) {
+                alert('주식 이름, 종목 코드, 매입가를 올바르게 입력해주세요.');
                 return;
             }
 
             const stock = {
                 id: Date.now(),
                 name: name,
+                stockCode: code,
                 purchasePrice,
                 currentPrice: purchasePrice,
                 highPoint: purchasePrice,
@@ -1053,6 +1064,52 @@ def create_html_file():
                 showStatus(`✅ "${stock.name}" 주식이 삭제되었습니다.`);
             }
         }
+        
+        // 이름 업데이트
+        function updateStockName(id, cell) {
+            const newName = cell.innerText.trim();
+            const stock = stocks.find(s => s.id === id);
+            if (!newName) {
+                alert('주식 이름은 비워둘 수 없습니다.');
+                cell.innerText = stock.name;
+                return;
+            }
+            stock.name = newName;
+            saveToLocalStorage();
+            renderTable();
+            showStatus(`✅ "${newName}"(으)로 주식 이름이 업데이트되었습니다.`);
+        }
+        
+        // 종목 코드 업데이트
+        function updateStockCode(id, cell) {
+            const newCode = cell.innerText.trim();
+            const stock = stocks.find(s => s.id === id);
+            if (!newCode) {
+                alert('종목 코드는 비워둘 수 없습니다.');
+                cell.innerText = stock.stockCode;
+                return;
+            }
+            stock.stockCode = newCode;
+            saveToLocalStorage();
+            showStatus(`✅ "${stock.name}"의 종목 코드가 ${newCode}(으)로 업데이트되었습니다.`);
+        }
+
+        // 매입가 업데이트
+        function updatePurchasePrice(id, cell) {
+            const newPrice = parseInt(cell.innerText.replace(/[^0-9]/g, ''));
+            const stock = stocks.find(s => s.id === id);
+            if (isNaN(newPrice) || newPrice <= 0) {
+                alert('올바른 매입가를 입력해주세요.');
+                cell.innerText = stock.purchasePrice.toLocaleString();
+                return;
+            }
+            stock.purchasePrice = newPrice;
+            stock.highPoint = Math.max(stock.highPoint, newPrice);
+            saveToLocalStorage();
+            renderTable();
+            showStatus(`✅ "${stock.name}"의 매입가가 ${newPrice.toLocaleString()}원으로 업데이트되었습니다.`);
+        }
+
 
         // 테이블 렌더링
         function renderTable() {
@@ -1074,8 +1131,11 @@ def create_html_file():
 
                 return `
                     <tr>
-                        <td><strong>${stock.name}</strong></td>
-                        <td class="text-right">${stock.purchasePrice.toLocaleString()}원</td>
+                        <td contenteditable="true" onblur="updateStockName(${stock.id}, this)"><strong>${stock.name}</strong></td>
+                        <td contenteditable="true" onblur="updateStockCode(${stock.id}, this)">${stock.stockCode}</td>
+                        <td class="text-right" contenteditable="true" onblur="updatePurchasePrice(${stock.id}, this)">
+                            ${stock.purchasePrice.toLocaleString()}원
+                        </td>
                         <td class="text-right">
                             ${editingId === stock.id ? `
                                 <div class="update-form">
