@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1758075887053,
+    "name": "삼성전자",
+    "purchasePrice": 77400,
+    "currentPrice": 80400,
+    "highPoint": 80400,
+    "lastUpdated": "9/18/2025, 4:27:18 PM",
+    "stockCode": "005930.KS"
+  },
+  {
+    "id": 1758075905644,
+    "name": "우리금융지주",
+    "purchasePrice": 26350,
+    "currentPrice": 26300,
+    "highPoint": 26350,
+    "lastUpdated": "9/17/2025, 1:47:06 PM",
+    "stockCode": "316140.KS"
+  },
+  {
+    "id": 1758075924236,
+    "name": "HD 에너지솔루션",
+    "purchasePrice": 50100,
+    "currentPrice": 51300,
+    "highPoint": 51300,
+    "lastUpdated": "9/18/2025, 4:27:40 PM",
+    "stockCode": "322000.KS"
+  },
+  {
+    "id": 1758075936010,
+    "name": "한화",
+    "purchasePrice": 92600,
+    "currentPrice": 93000,
+    "highPoint": 93000,
+    "lastUpdated": "9/17/2025, 1:48:17 PM",
+    "stockCode": "000880.KS"
+  },
+  {
+    "id": 1758076049038,
+    "name": "카카오",
+    "purchasePrice": 62900,
+    "currentPrice": 64700,
+    "highPoint": 64700,
+    "lastUpdated": "9/18/2025, 4:27:59 PM",
+    "stockCode": "035720.KS"
+  }
+]
