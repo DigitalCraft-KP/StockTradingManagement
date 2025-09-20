@@ -1,0 +1,154 @@
+[
+  {
+    "id": 1758158416989,
+    "name": "현대차",
+    "purchasePrice": 197479,
+    "currentPrice": 213500,
+    "highPoint": 218000,
+    "lastUpdated": "9/19/2025, 11:32:09 AM"
+  },
+  {
+    "id": 1758158481817,
+    "name": "S-Oil",
+    "purchasePrice": 72253,
+    "currentPrice": 58200,
+    "highPoint": 72253,
+    "lastUpdated": "9/19/2025, 9:08:19 AM"
+  },
+  {
+    "id": 1758158580831,
+    "name": "HMM",
+    "purchasePrice": 20446,
+    "currentPrice": 22900,
+    "highPoint": 23200,
+    "lastUpdated": "9/19/2025, 9:08:08 AM"
+  },
+  {
+    "id": 1758158596311,
+    "name": "현대모비스",
+    "purchasePrice": 250900,
+    "currentPrice": 303500,
+    "highPoint": 314500,
+    "lastUpdated": "9/19/2025, 11:32:00 AM"
+  },
+  {
+    "id": 1758158614694,
+    "name": "JYP Ent.",
+    "purchasePrice": 60146,
+    "currentPrice": 77200,
+    "highPoint": 77200,
+    "lastUpdated": "9/19/2025, 9:14:35 AM"
+  },
+  {
+    "id": 1758158635789,
+    "name": "주성엔지니어링",
+    "purchasePrice": 29808,
+    "currentPrice": 32600,
+    "highPoint": 32600,
+    "lastUpdated": "9/19/2025, 9:01:58 AM"
+  },
+  {
+    "id": 1758158650188,
+    "name": "에스엠",
+    "purchasePrice": 128500,
+    "currentPrice": 147000,
+    "highPoint": 147000,
+    "lastUpdated": "9/19/2025, 9:13:20 AM"
+  },
+  {
+    "id": 1758158672092,
+    "name": "아이마켓코리아",
+    "purchasePrice": 8140,
+    "currentPrice": 8260,
+    "highPoint": 8260,
+    "lastUpdated": "9/18/2025, 2:41:21 PM"
+  },
+  {
+    "id": 1758158690828,
+    "name": "KODEX 200 가치저변동",
+    "purchasePrice": 12974,
+    "currentPrice": 14940,
+    "highPoint": 14940,
+    "lastUpdated": "9/18/2025, 2:41:32 PM"
+  },
+  {
+    "id": 1758158713228,
+    "name": "KODEX KTOP30",
+    "purchasePrice": 16836,
+    "currentPrice": 19510,
+    "highPoint": 19510,
+    "lastUpdated": "9/19/2025, 9:13:53 AM"
+  },
+  {
+    "id": 1758158723669,
+    "name": "하이브",
+    "purchasePrice": 268000,
+    "currentPrice": 292000,
+    "highPoint": 292000,
+    "lastUpdated": "9/18/2025, 2:41:55 PM"
+  },
+  {
+    "id": 1758240171076,
+    "name": "기아 (카카오)",
+    "purchasePrice": 94600,
+    "currentPrice": 100800,
+    "highPoint": 102000,
+    "lastUpdated": "9/19/2025, 11:33:13 AM"
+  },
+  {
+    "id": 1758240199180,
+    "name": "JYP Ent. (카카오)",
+    "purchasePrice": 61000,
+    "currentPrice": 77200,
+    "highPoint": 77200,
+    "lastUpdated": "9/19/2025, 9:03:59 AM"
+  },
+  {
+    "id": 1758240222408,
+    "name": "주성엔지니어링 (카카오)",
+    "purchasePrice": 26650,
+    "currentPrice": 31800,
+    "highPoint": 31800,
+    "lastUpdated": "9/19/2025, 9:03:51 AM"
+  },
+  {
+    "id": 1758240919387,
+    "name": "테슬라",
+    "purchasePrice": 409307,
+    "currentPrice": 580285,
+    "highPoint": 580285,
+    "lastUpdated": "9/19/2025, 9:16:17 AM"
+  },
+  {
+    "id": 1758240935354,
+    "name": "어도비",
+    "purchasePrice": 494635,
+    "currentPrice": 509380,
+    "highPoint": 509380,
+    "lastUpdated": "9/19/2025, 9:16:28 AM"
+  },
+  {
+    "id": 1758240949157,
+    "name": "엔비디아",
+    "purchasePrice": 244043,
+    "currentPrice": 244451,
+    "highPoint": 244451,
+    "lastUpdated": "9/19/2025, 9:16:38 AM"
+  },
+  {
+    "id": 1758240961717,
+    "name": "애플",
+    "purchasePrice": 320996,
+    "currentPrice": 329853,
+    "highPoint": 329853,
+    "lastUpdated": "9/19/2025, 9:16:51 AM"
+  },
+  {
+    "id": 1758249233197,
+    "name": "에흐르 테스트 시스템즈",
+    "purchasePrice": 40000,
+    "currentPrice": 42327,
+    "highPoint": 42327,
+    "lastUpdated": "9/19/2025, 11:34:00 AM"
+  }
+]

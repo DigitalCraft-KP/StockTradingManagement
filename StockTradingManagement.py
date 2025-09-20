@@ -1,4 +1,4 @@
-# StockTrading.py - 파일 저장/로드 기능이 있는 웹서버
+# StockTrading.py - 파일 저장/로드 기능 및 현재가 업데이트 기능을 포함한 웹서버
 
 import http.server
 import socketserver
@@ -9,14 +9,17 @@ import json
 import urllib.parse
 from pathlib import Path
 from datetime import datetime
+import yfinance as yf # yfinance 라이브러리 추가
 
 class StockDataHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
-        """POST 요청 처리 (데이터 저장/로드)"""
+        """POST 요청 처리 (데이터 저장/로드/업데이트)"""
         if self.path == '/api/save':
             self.save_data()
         elif self.path == '/api/load':
             self.load_data()
+        elif self.path == '/api/update_price':
+            self.update_stock_price()
         else:
             self.send_error(404)
     
@@ -75,6 +78,37 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.load(f)
             
             response = {"success": True, "data": data, "filename": filename}
+            self.send_json_response(response)
+            
+        except Exception as e:
+            error_response = {"success": False, "error": str(e)}
+            self.send_json_response(error_response, 500)
+
+    def update_stock_price(self):
+        """종목 코드로 현재가 조회"""
+        try:
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            request_data = json.loads(post_data.decode('utf-8'))
+            
+            ticker = request_data.get('ticker')
+            if not ticker:
+                raise ValueError("종목 코드가 필요합니다.")
+
+            stock = yf.Ticker(ticker)
+            
+            # yfinance 라이브러리로 현재가 정보 가져오기
+            info = stock.info
+            current_price = info.get('currentPrice')
+
+            if current_price is None:
+                # 'currentPrice'가 없을 경우 'regularMarketPrice' 시도
+                current_price = info.get('regularMarketPrice')
+            
+            if current_price is None:
+                raise ValueError(f"종목 코드 '{ticker}'의 현재가를 찾을 수 없습니다.")
+
+            response = {"success": True, "ticker": ticker, "currentPrice": current_price}
             self.send_json_response(response)
             
         except Exception as e:
@@ -580,7 +614,7 @@ def create_html_file():
                     🗑️ 전체 삭제
                 </button>
                 <button class="btn add-btn" onclick="toggleAddForm()">+ 주식 추가</button>
-                <button class="btn settings-btn" onclick="toggleSettingsSection()">⚙️ 매매 설정</button>
+                <button class="btn settings-btn" onclick="toggleSettingsSection()">⚙️ 설정</button>
                 <button class="btn save-btn" onclick="toggleSaveSection()">💾 저장</button>
                 <button class="btn load-btn" onclick="toggleLoadSection()">📁 불러오기</button>
             </div>
@@ -616,7 +650,7 @@ def create_html_file():
         </div>
         
         <div id="settingsSection" class="form-section hidden">
-            <div class="form-title">📈 매매 비율 설정</div>
+            <div class="form-title">📈 매매 비율 및 환율 설정</div>
             <div class="setting-group">
                 <label for="sellPercentageInput">매도 비율 (%)</label>
                 <input type="number" id="sellPercentageInput" class="form-input" value="8" min="1" max="100" />
@@ -624,6 +658,10 @@ def create_html_file():
             <div class="setting-group">
                 <label for="buyMorePercentageInput">추가 매수 비율 (%)</label>
                 <input type="number" id="buyMorePercentageInput" class="form-input" value="5" min="1" max="100" />
+            </div>
+            <div class="setting-group">
+                <label for="exchangeRateInput">환율 (1달러당 원)</label>
+                <input type="number" id="exchangeRateInput" class="form-input" value="1300" min="1" step="0.01" />
             </div>
             <button class="btn btn-secondary" onclick="toggleSettingsSection()">저장</button>
         </div>
@@ -670,13 +708,13 @@ def create_html_file():
         <div class="help-section">
             <div class="help-title">사용 가이드</div>
             <div class="help-content">
-                <div class="help-item"><strong>매매 설정</strong>: ⚙️ 버튼을 눌러 매도 및 추가 매수 비율을 설정할 수 있습니다.</div>
+                <div class="help-item"><strong>설정</strong>: ⚙️ 버튼을 눌러 매도 및 추가 매수 비율, 그리고 환율을 설정할 수 있습니다.</div>
                 <div class="help-item"><strong>파일 저장</strong>: 💾 저장 버튼으로 현재 데이터를 파일로 저장할 수 있습니다.</div>
                 <div class="help-item"><strong>파일 불러오기</strong>: 📁 불러오기 버튼으로 저장된 파일에서 데이터를 복원할 수 있습니다.</div>
                 <div class="help-item"><strong>수동 입력</strong>: ✏️ 아이콘을 클릭하여 직접 가격을 입력할 수 있습니다.</div>
                 <div class="help-item"><strong>전체 삭제</strong>: "전체 삭제" 버튼으로 모든 주식 항목을 한번에 삭제할 수 있습니다.</div>
                 <div class="help-item"><strong>고점</strong>: 매입 후 현재가가 매입가보다 높을 때 업데이트됩니다.</div>
-                <div class="help-item"><strong>매도/추가매수</strong>: '매매 설정'에서 지정한 비율에 따라 가격이 계산됩니다.</div>
+                <div class="help-item"><strong>매도/추가매수</strong>: '설정'에서 지정한 비율에 따라 가격이 계산됩니다.</div>
                 <div class="help-item"><strong>의견</strong>: 현재가 위치에 따른 매매 의견입니다.</div>
             </div>
         </div>
@@ -688,6 +726,7 @@ def create_html_file():
         let selectedFileName = null;
         let sellPercentage = 8;
         let buyMorePercentage = 5;
+        let exchangeRate = 1; // 환율 변수 추가
 
         // 페이지 로드 시 실행
         document.addEventListener('DOMContentLoaded', function() {
@@ -714,6 +753,7 @@ def create_html_file():
             
             document.getElementById('sellPercentageInput').addEventListener('input', updateSettings);
             document.getElementById('buyMorePercentageInput').addEventListener('input', updateSettings);
+            document.getElementById('exchangeRateInput').addEventListener('input', updateSettings);
         });
         
         // 설정값 로드
@@ -723,9 +763,11 @@ def create_html_file():
                 const settings = JSON.parse(savedSettings);
                 sellPercentage = settings.sellPercentage || 8;
                 buyMorePercentage = settings.buyMorePercentage || 5;
+                exchangeRate = settings.exchangeRate || 1; // 환율 로드
                 
                 document.getElementById('sellPercentageInput').value = sellPercentage;
                 document.getElementById('buyMorePercentageInput').value = buyMorePercentage;
+                document.getElementById('exchangeRateInput').value = exchangeRate;
             }
             updateSettingsDisplay();
         }
@@ -734,11 +776,13 @@ def create_html_file():
         function updateSettings() {
             sellPercentage = parseInt(document.getElementById('sellPercentageInput').value) || 8;
             buyMorePercentage = parseInt(document.getElementById('buyMorePercentageInput').value) || 5;
+            exchangeRate = parseFloat(document.getElementById('exchangeRateInput').value) || 1; // 환율 업데이트
             
             if (sellPercentage < 1 || sellPercentage > 100) sellPercentage = 8;
             if (buyMorePercentage < 1 || buyMorePercentage > 100) buyMorePercentage = 5;
+            if (exchangeRate < 1) exchangeRate = 1;
 
-            const settings = { sellPercentage, buyMorePercentage };
+            const settings = { sellPercentage, buyMorePercentage, exchangeRate };
             localStorage.setItem('stockSettings', JSON.stringify(settings));
             
             updateSettingsDisplay();
@@ -748,7 +792,7 @@ def create_html_file():
         // 설정값 표시 업데이트
         function updateSettingsDisplay() {
             document.getElementById('currentSettings').textContent = 
-                `매도 비율: ${sellPercentage}% | 추가 매수 비율: ${buyMorePercentage}%`;
+                `매도 비율: ${sellPercentage}% | 추가 매수 비율: ${buyMorePercentage}% | 환율: ₩${exchangeRate.toLocaleString()} `;
         }
 
         // 로컬 스토리지에서 데이터 로드
@@ -958,7 +1002,7 @@ def create_html_file():
         function addStock() {
             const name = document.getElementById('stockName').value.trim();
             const code = document.getElementById('stockCode').value.trim();
-            const purchasePrice = parseInt(document.getElementById('purchasePrice').value);
+            const purchasePrice = parseFloat(document.getElementById('purchasePrice').value); // 소수점 허용
 
             if (!name || !code || !purchasePrice || purchasePrice <= 0) {
                 alert('주식 이름, 종목 코드, 매입가를 올바르게 입력해주세요.');
@@ -1014,9 +1058,9 @@ def create_html_file():
         // 현재가 업데이트 (수동)
         function updateCurrentPrice(id) {
             const input = document.querySelector(`#update-${id}`);
-            const newPrice = parseInt(input.value);
+            const newPrice = parseFloat(input.value); // 소수점 허용
             
-            if (!newPrice || newPrice <= 0) {
+            if (isNaN(newPrice) || newPrice <= 0) {
                 alert('올바른 가격을 입력해주세요.');
                 return;
             }
@@ -1096,7 +1140,7 @@ def create_html_file():
 
         // 매입가 업데이트
         function updatePurchasePrice(id, cell) {
-            const newPrice = parseInt(cell.innerText.replace(/[^0-9]/g, ''));
+            const newPrice = parseFloat(cell.innerText.replace(/[^0-9.]/g, ''));
             const stock = stocks.find(s => s.id === id);
             if (isNaN(newPrice) || newPrice <= 0) {
                 alert('올바른 매입가를 입력해주세요.');
@@ -1129,12 +1173,20 @@ def create_html_file():
                 const profitAmount = stock.currentPrice - stock.purchasePrice;
                 const profitRate = ((stock.currentPrice - stock.purchasePrice) / stock.purchasePrice * 100).toFixed(2);
 
+                const purchasePriceKRW = Math.round(stock.purchasePrice * exchangeRate);
+                const currentPriceKRW = Math.round(stock.currentPrice * exchangeRate);
+                const highPointKRW = Math.round(stock.highPoint * exchangeRate);
+                const sellPriceKRW = Math.round(metrics.sellPrice * exchangeRate);
+                const buyMorePriceKRW = Math.round(metrics.buyMorePrice * exchangeRate);
+                const profitAmountKRW = Math.round(profitAmount * exchangeRate);
+
                 return `
                     <tr>
                         <td contenteditable="true" onblur="updateStockName(${stock.id}, this)"><strong>${stock.name}</strong></td>
                         <td contenteditable="true" onblur="updateStockCode(${stock.id}, this)">${stock.stockCode}</td>
                         <td class="text-right" contenteditable="true" onblur="updatePurchasePrice(${stock.id}, this)">
-                            ${stock.purchasePrice.toLocaleString()}원
+                            <div class="small-text text-gray">${stock.purchasePrice.toLocaleString()}</div>
+                            <strong>₩${purchasePriceKRW.toLocaleString()}</strong>
                         </td>
                         <td class="text-right">
                             ${editingId === stock.id ? `
@@ -1147,17 +1199,17 @@ def create_html_file():
                             ` : `
                                 <div class="price-info">
                                     <div class="${stock.currentPrice >= stock.purchasePrice ? 'text-green' : 'text-red'}">
-                                        ${stock.currentPrice.toLocaleString()}원
+                                        <div class="small-text text-gray">${stock.currentPrice.toLocaleString()}</div>
+                                        <strong>₩${currentPriceKRW.toLocaleString()}</strong>
                                         <span class="update-icon" onclick="startEdit(${stock.id})" title="수동 입력">✏️</span>
-                                    </div>
-                                    <div class="small-text ${profitAmount >= 0 ? 'text-green' : 'text-red'}">
-                                        (${profitAmount >= 0 ? '+' : ''}${profitAmount.toLocaleString()}원, ${profitRate}%)
+                                        <span class="update-icon" onclick="fetchPriceAndAutoUpdate('${stock.stockCode}', ${stock.id})" title="실시간 가격 업데이트">🔄</span>
                                     </div>
                                 </div>
                             `}
                         </td>
                         <td class="text-right">
-                            <div class="text-purple">${stock.highPoint.toLocaleString()}원</div>
+                            <div class="small-text text-gray">${stock.highPoint.toLocaleString()}</div>
+                            <div class="text-purple"><strong>₩${highPointKRW.toLocaleString()}</strong></div>
                             ${stock.highPoint > stock.purchasePrice ? `
                                 <div class="small-text text-purple">
                                     (+${((stock.highPoint - stock.purchasePrice) / stock.purchasePrice * 100).toFixed(1)}%)
@@ -1165,16 +1217,25 @@ def create_html_file():
                             ` : ''}
                         </td>
                         <td class="text-right">
-                            <div class="text-red">${metrics.sellPrice.toLocaleString()}원</div>
+                            <div class="small-text text-gray">${metrics.sellPrice.toLocaleString()}</div>
+                            <div class="text-red"><strong>₩${sellPriceKRW.toLocaleString()}</strong></div>
                             <div class="small-text text-red">(고점 -${sellPercentage}%)</div>
                         </td>
                         <td class="text-right">
-                            <div class="text-blue">${metrics.buyMorePrice.toLocaleString()}원</div>
+                            <div class="small-text text-gray">${metrics.buyMorePrice.toLocaleString()}</div>
+                            <div class="text-blue"><strong>₩${buyMorePriceKRW.toLocaleString()}</strong></div>
                             <div class="small-text text-blue">(고점 -${buyMorePercentage}%)</div>
                         </td>
                         <td class="text-center ${metrics.profitLoss === '이익' ? 'text-green' : 'text-red'}">
                             <div>${metrics.profitLoss}</div>
-                            <div class="small-text">${Math.abs(profitAmount).toLocaleString()}원</div>
+                            <div class="small-text">
+                                <span class="${profitAmount >= 0 ? 'text-green' : 'text-red'}">
+                                    (${profitAmount >= 0 ? '+' : ''}${profitRate}%)
+                                </span>
+                                <div class="${profitAmount >= 0 ? 'text-green' : 'text-red'}">
+                                    <strong>₩${Math.abs(profitAmountKRW).toLocaleString()}</strong>
+                                </div>
+                            </div>
                         </td>
                         <td class="text-center ${
                             metrics.opinion === '매수' ? 'text-blue' : 
@@ -1195,6 +1256,32 @@ def create_html_file():
                     </tr>
                 `;
             }).join('');
+        }
+
+        // 실시간 현재가 가져와서 업데이트
+        async function fetchPriceAndAutoUpdate(ticker, id) {
+            showStatus('🔄 현재가 정보를 가져오는 중...', false);
+            try {
+                const response = await fetch('/api/update_price', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ ticker: ticker }),
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    const newPrice = result.currentPrice;
+                    updateStockPrice(id, newPrice);
+                    const newPriceKRW = Math.round(newPrice * exchangeRate);
+                    showStatus(`✅ ${ticker}의 현재가가 ₩${newPriceKRW.toLocaleString()}로 업데이트되었습니다.`);
+                } else {
+                    showStatus(`❌ ${ticker} 현재가 업데이트 실패: ${result.error}`, true);
+                }
+            } catch (error) {
+                showStatus(`❌ ${ticker} 현재가 조회 중 오류 발생: ${error.message}`, true);
+            }
         }
     </script>
 </body>
