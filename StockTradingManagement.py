@@ -18,8 +18,10 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
             self.save_data()
         elif self.path == '/api/load':
             self.load_data()
-        elif self.path == '/api/update_prices': # 새로운 API 엔드포인트 추가
+        elif self.path == '/api/update_prices': # 주식 가격 업데이트
             self.update_prices()
+        elif self.path == '/api/update_exchange_rate': # 환율 자동 업데이트 추가
+            self.update_exchange_rate()
         else:
             self.send_error(404)
     
@@ -60,6 +62,23 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
             response = {"success": True, "updated_prices": updated_stocks}
             self.send_json_response(response)
             
+        except Exception as e:
+            error_response = {"success": False, "error": str(e)}
+            self.send_json_response(error_response, 500)
+
+    def update_exchange_rate(self):
+        """실시간 환율(USD→KRW) 업데이트"""
+        try:
+            ticker = yf.Ticker("USDKRW=X")
+            exchange_rate = ticker.info.get("regularMarketPrice")
+
+            if exchange_rate:
+                response = {"success": True, "exchange_rate": round(exchange_rate, 2)}
+            else:
+                response = {"success": False, "error": "환율 정보를 가져올 수 없습니다."}
+
+            self.send_json_response(response)
+
         except Exception as e:
             error_response = {"success": False, "error": str(e)}
             self.send_json_response(error_response, 500)
@@ -667,7 +686,10 @@ def create_html_file():
             </div>
             <div class="setting-group">
                 <label for="exchangeRateInput">환율 (1 USD = ? KRW)</label>
-                <input type="number" id="exchangeRateInput" class="form-input" value="1300" min="1" />
+               <div style="display: flex; gap: 10px; align-items: center;">
+                   <input type="number" id="exchangeRateInput" class="form-inpu    t" value="1300" min="1" />
+                   <button class="btn btn-primary" onclick="updateExchangeRate(    )">자동 업데이트</button>
+               </div>
             </div>
             <button class="btn btn-secondary" onclick="toggleSettingsSection()">저장</button>
         </div>
@@ -736,6 +758,25 @@ def create_html_file():
         let buyMorePercentage = 5;
         let exchangeRate = 1300;
 
+        // 환율 자동 업데이트
+        async function updateExchangeRate() {
+           try {
+                const response = await fetch('/api/update_exchange_rate', { method: 'POST' });
+                const result = await response.json();
+
+                if (result.success) {
+                    exchangeRate = result.exchange_rate;
+                    document.getElementById('exchangeRateInput').value = exchangeRate;
+                    updateSettings();
+                    showStatus(`✅ 환율이 자동 업데이트되었습니다: 1 USD = ${exchangeRate} KRW`);
+                } else {
+                    showStatus(`❌ 환율 업데이트 실패: ${result.error}`, true);
+                }
+            } catch (error) {
+                showStatus(`❌ 환율 업데이트 중 오류 발생: ${error.message}`, true);
+            }
+        }
+        
         // 페이지 로드 시 실행
         document.addEventListener('DOMContentLoaded', function() {
             loadFromLocalStorage();
