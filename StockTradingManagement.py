@@ -1,4 +1,4 @@
-# StockTrading.py - 파일 저장/로드 기능이 있는 웹서버
+# StockTrading.py - 개선된 파일 저장/로드 기능이 있는 웹서버
 
 import http.server
 import socketserver
@@ -18,6 +18,8 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
             self.save_data()
         elif self.path == '/api/load':
             self.load_data()
+        elif self.path == '/api/load_file':  # 새로운 엔드포인트: 임의의 파일 로드
+            self.load_file_from_path()
         elif self.path == '/api/update_prices': # 주식 가격 업데이트
             self.update_prices()
         elif self.path == '/api/update_exchange_rate': # 환율 자동 업데이트 추가
@@ -56,7 +58,7 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
                     else:
                         updated_stocks[code] = None # 가격 정보를 찾을 수 없는 경우
                 except Exception as e:
-                    print(f"❌ 종목 코드 {code}의 가격 업데이트 중 오류 발생: {e}")
+                    print(f"⌛ 종목 코드 {code}의 가격 업데이트 중 오류 발생: {e}")
                     updated_stocks[code] = None
 
             response = {"success": True, "updated_prices": updated_stocks}
@@ -84,27 +86,44 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json_response(error_response, 500)
 
     def save_data(self):
-        """데이터를 JSON 파일로 저장"""
+        """데이터를 JSON 파일로 저장 (사용자 정의 파일명 지원)"""
         try:
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+            request_data = json.loads(post_data.decode('utf-8'))
             
-            # 파일명 생성 (타임스탬프 포함)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"stock_data_{timestamp}.json"
+            data = request_data.get('data', [])
+            custom_filename = request_data.get('filename', '')
+            save_path = request_data.get('save_path', '')
             
-            # 데이터 폴더가 없으면 생성
-            data_dir = Path("stock_data")
-            data_dir.mkdir(exist_ok=True)
+            # 파일명 처리
+            if custom_filename:
+                if not custom_filename.endswith('.json'):
+                    custom_filename += '.json'
+                filename = custom_filename
+            else:
+                # 기본 타임스탬프 파일명
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"stock_data_{timestamp}.json"
+            
+            # 저장 경로 결정
+            if save_path:
+                # 사용자가 지정한 경로
+                save_dir = Path(save_path)
+                if not save_dir.exists():
+                    save_dir.mkdir(parents=True, exist_ok=True)
+            else:
+                # 기본 경로
+                save_dir = Path("stock_data")
+                save_dir.mkdir(exist_ok=True)
             
             # 파일 저장
-            file_path = data_dir / filename
+            file_path = save_dir / filename
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             
             # 응답
-            response = {"success": True, "filename": filename, "path": str(file_path)}
+            response = {"success": True, "filename": filename, "path": str(file_path.absolute())}
             self.send_json_response(response)
             
         except Exception as e:
@@ -112,7 +131,7 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json_response(error_response, 500)
     
     def load_data(self):
-        """JSON 파일에서 데이터 로드"""
+        """기본 stock_data 폴더에서 JSON 파일 로드"""
         try:
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
@@ -137,6 +156,35 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
             error_response = {"success": False, "error": str(e)}
             self.send_json_response(error_response, 500)
     
+    def load_file_from_path(self):
+        """임의의 경로에서 JSON 파일 로드"""
+        try:
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            request_data = json.loads(post_data.decode('utf-8'))
+            
+            file_path = request_data.get('file_path')
+            if not file_path:
+                raise ValueError("파일 경로가 필요합니다.")
+            
+            file_path = Path(file_path)
+            
+            if not file_path.exists():
+                raise FileNotFoundError(f"파일을 찾을 수 없습니다: {file_path}")
+            
+            if not file_path.suffix.lower() == '.json':
+                raise ValueError("JSON 파일만 지원됩니다.")
+            
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            response = {"success": True, "data": data, "filename": file_path.name, "path": str(file_path.absolute())}
+            self.send_json_response(response)
+            
+        except Exception as e:
+            error_response = {"success": False, "error": str(e)}
+            self.send_json_response(error_response, 500)
+    
     def list_files(self):
         """저장된 파일 목록 반환"""
         try:
@@ -149,7 +197,8 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
                     files.append({
                         "filename": file_path.name,
                         "size": stat.st_size,
-                        "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+                        "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+                        "path": str(file_path.absolute())
                     })
             
             # 최신 파일부터 정렬
@@ -312,6 +361,7 @@ def create_html_file():
             gap: 15px;
             align-items: center;
             flex-wrap: wrap;
+            margin-bottom: 15px;
         }
 
         .form-input {
@@ -327,6 +377,11 @@ def create_html_file():
             outline: none;
             border-color: #007bff;
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .form-input-small {
+            min-width: 150px;
+            flex: 0 0 150px;
         }
 
         select {
@@ -610,6 +665,42 @@ def create_html_file():
             margin-bottom: 15px;
         }
 
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .path-display {
+            font-size: 12px;
+            color: #6c757d;
+            padding: 5px 0;
+            word-break: break-all;
+        }
+
+        .load-options {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .load-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .load-option input[type="radio"] {
+            margin-right: 5px;
+        }
+
         @media (max-width: 768px) {
             .header-controls {
                 flex-direction: column;
@@ -641,7 +732,7 @@ def create_html_file():
                     🔄 현재가 업데이트
                 </button>
                 <button class="btn save-btn" onclick="toggleSaveSection()">💾 저장</button>
-                <button class="btn load-btn" onclick="toggleLoadSection()">📁 불러오기</button>
+                <button class="btn load-btn" onclick="toggleLoadSection()">📂 불러오기</button>
             </div>
         </div>
         
@@ -651,31 +742,64 @@ def create_html_file():
 
         <div id="saveSection" class="form-section hidden">
             <div class="form-title">💾 데이터 저장</div>
+            <div class="form-group">
+                <label for="saveFilename">파일명 (선택사항)</label>
+                <input type="text" id="saveFilename" class="form-input" placeholder="예: 내_주식_포트폴리오 (확장자 .json은 자동 추가됩니다)" />
+            </div>
+            <div class="form-group">
+                <label for="savePath">저장 경로 (선택사항)</label>
+                <input type="text" id="savePath" class="form-input" placeholder="예: C:\\Users\\사용자명\\Documents (기본값: stock_data 폴더)" />
+                <div class="path-display">기본 경로를 사용하려면 비워두세요. 절대 경로 또는 상대 경로를 입력할 수 있습니다.</div>
+            </div>
             <div class="form-row">
-                <div style="flex: 1;">
-                    <p>현재 주식 데이터를 파일로 저장합니다. 파일은 프로그램 실행 폴더의 'stock_data' 폴더에 저장됩니다.</p>
-                </div>
                 <button class="btn btn-success" onclick="saveDataToFile()">저장하기</button>
                 <button class="btn btn-secondary" onclick="toggleSaveSection()">취소</button>
             </div>
         </div>
 
         <div id="loadSection" class="form-section hidden">
-            <div class="form-title">📁 데이터 불러오기</div>
-            <div style="margin-bottom: 15px;">
-                <p>저장된 파일 목록에서 불러올 파일을 선택하세요.</p>
-            </div>
-            <div class="file-list" id="fileList">
+            <div class="form-title">📂 데이터 불러오기</div>
+            
+            <div class="load-options">
+                <div class="load-option">
+                    <input type="radio" id="loadFromDefault" name="loadOption" value="default" checked>
+                    <label for="loadFromDefault">기본 폴더에서 선택</label>
                 </div>
+                <div class="load-option">
+                    <input type="radio" id="loadFromCustom" name="loadOption" value="custom">
+                    <label for="loadFromCustom">파일 경로 직접 입력</label>
+                </div>
+            </div>
+
+            <div id="defaultLoadSection">
+                <div style="margin-bottom: 15px;">
+                    <p>저장된 파일 목록에서 불러올 파일을 선택하세요.</p>
+                </div>
+                <div class="file-list" id="fileList"></div>
+                <div class="form-row" style="margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="loadSelectedFile()" id="loadBtn" disabled>선택한 파일 불러오기</button>
+                    <button class="btn btn-secondary" onclick="refreshFileList()">목록 새로고침</button>
+                </div>
+            </div>
+
+            <div id="customLoadSection" style="display: none;">
+                <div class="form-group">
+                    <label for="customFilePath">파일 경로</label>
+                    <input type="text" id="customFilePath" class="form-input" placeholder="예: C:\\Users\\사용자명\\Documents\\내_주식_데이터.json" />
+                    <div class="path-display">JSON 파일의 전체 경로를 입력하세요.</div>
+                </div>
+                <div class="form-row">
+                    <button class="btn btn-primary" onclick="loadFromCustomPath()">파일 불러오기</button>
+                </div>
+            </div>
+
             <div class="form-row" style="margin-top: 15px;">
-                <button class="btn btn-primary" onclick="loadSelectedFile()" id="loadBtn" disabled>선택한 파일 불러오기</button>
-                <button class="btn btn-secondary" onclick="refreshFileList()">목록 새로고침</button>
                 <button class="btn btn-secondary" onclick="toggleLoadSection()">취소</button>
             </div>
         </div>
         
         <div id="settingsSection" class="form-section hidden">
-            <div class="form-title">📈 매매 설정 및 환율</div>
+            <div class="form-title">🔈 매매 설정 및 환율</div>
             <div class="setting-group">
                 <label for="sellPercentageInput">매도 비율 (%)</label>
                 <input type="number" id="sellPercentageInput" class="form-input" value="8" min="1" max="100" />
@@ -687,8 +811,8 @@ def create_html_file():
             <div class="setting-group">
                 <label for="exchangeRateInput">환율 (1 USD = ? KRW)</label>
                <div style="display: flex; gap: 10px; align-items: center;">
-                   <input type="number" id="exchangeRateInput" class="form-inpu    t" value="1300" min="1" />
-                   <button class="btn btn-primary" onclick="updateExchangeRate(    )">자동 업데이트</button>
+                   <input type="number" id="exchangeRateInput" class="form-input" value="1300" min="1" />
+                   <button class="btn btn-primary" onclick="updateExchangeRate()">자동 업데이트</button>
                </div>
             </div>
             <button class="btn btn-secondary" onclick="toggleSettingsSection()">저장</button>
@@ -724,7 +848,7 @@ def create_html_file():
                     </tr>
                 </thead>
                 <tbody id="stockTableBody">
-                    </tbody>
+                </tbody>
             </table>
         </div>
 
@@ -737,9 +861,8 @@ def create_html_file():
             <div class="help-title">사용 가이드</div>
             <div class="help-content">
                 <div class="help-item"><strong>1. 매매 설정 및 환율</strong>: ⚙️ 설정 버튼을 눌러 매도 및 추가 매수 비율을 설정할 수 있고, 미국 주식 매매를 위해 환율을 설정할 수 있습니다.</div>
-                <div class="help-item"><strong>2. 파일 저장</strong>: 💾 저장 버튼으로 현재 데이터를 .json 파일로 저장할 수 있습니다. 파일은 stock_data 폴더에 타임스탬프와 함께 저장됩니다.
-</div>
-                <div class="help-item"><strong>3. 파일 불러오기</strong>: "불러오기" 📁 버튼으로 저장된 파일에서 데이터를 복원할 수 있습니다.</div>
+                <div class="help-item"><strong>2. 파일 저장</strong>: 💾 저장 버튼으로 현재 데이터를 .json 파일로 저장할 수 있습니다. 파일명과 저장 경로를 자유롭게 지정할 수 있습니다.</div>
+                <div class="help-item"><strong>3. 파일 불러오기</strong>: 📂 불러오기 버튼으로 기본 폴더의 파일을 선택하거나, 임의의 경로에서 직접 파일을 불러올 수 있습니다.</div>
                 <div class="help-item"><strong>4. 현재가 업데이트</strong>: "현재가 업데이트" 🔄 버튼으로 등록된 모든 종목의 현재가를 자동으로 업데이트합니다.</div>
                 <div class="help-item"><strong>5. 수동 입력</strong>: 테이블의 현재가 옆 ✏️ 아이콘을 클릭하여 직접 가격을 입력할 수 있습니다.</div>
                 <div class="help-item"><strong>6. 전체 삭제</strong>: "전체 삭제" 🗑️ 버튼으로 모든 주식 항목을 한번에 삭제할 수 있습니다.</div>
@@ -770,10 +893,10 @@ def create_html_file():
                     updateSettings();
                     showStatus(`✅ 환율이 자동 업데이트되었습니다: 1 USD = ${exchangeRate} KRW`);
                 } else {
-                    showStatus(`❌ 환율 업데이트 실패: ${result.error}`, true);
+                    showStatus(`⌛ 환율 업데이트 실패: ${result.error}`, true);
                 }
             } catch (error) {
-                showStatus(`❌ 환율 업데이트 중 오류 발생: ${error.message}`, true);
+                showStatus(`⌛ 환율 업데이트 중 오류 발생: ${error.message}`, true);
             }
         }
         
@@ -803,7 +926,28 @@ def create_html_file():
             document.getElementById('sellPercentageInput').addEventListener('input', updateSettings);
             document.getElementById('buyMorePercentageInput').addEventListener('input', updateSettings);
             document.getElementById('exchangeRateInput').addEventListener('input', updateSettings);
+            
+            // 로드 옵션 변경 이벤트
+            document.querySelectorAll('input[name="loadOption"]').forEach(radio => {
+                radio.addEventListener('change', toggleLoadOption);
+            });
         });
+        
+        // 로드 옵션 토글
+        function toggleLoadOption() {
+            const defaultSection = document.getElementById('defaultLoadSection');
+            const customSection = document.getElementById('customLoadSection');
+            const selectedOption = document.querySelector('input[name="loadOption"]:checked').value;
+            
+            if (selectedOption === 'default') {
+                defaultSection.style.display = 'block';
+                customSection.style.display = 'none';
+                refreshFileList();
+            } else {
+                defaultSection.style.display = 'none';
+                customSection.style.display = 'block';
+            }
+        }
         
         // 설정값 로드
         function loadSettings() {
@@ -875,6 +1019,10 @@ def create_html_file():
             const section = document.getElementById('saveSection');
             section.classList.toggle('hidden');
             hideOtherSections('saveSection');
+            
+            if (!section.classList.contains('hidden')) {
+                document.getElementById('saveFilename').focus();
+            }
         }
 
         // 불러오기 섹션 토글
@@ -884,7 +1032,7 @@ def create_html_file():
             hideOtherSections('loadSection');
             
             if (!section.classList.contains('hidden')) {
-                refreshFileList();
+                toggleLoadOption();
             }
         }
         
@@ -905,27 +1053,74 @@ def create_html_file():
             });
         }
 
-        // 파일로 데이터 저장
+        // 파일로 데이터 저장 (개선된 버전)
         async function saveDataToFile() {
             try {
+                const customFilename = document.getElementById('saveFilename').value.trim();
+                const savePath = document.getElementById('savePath').value.trim();
+                
+                const requestData = {
+                    data: stocks,
+                    filename: customFilename,
+                    save_path: savePath
+                };
+
                 const response = await fetch('/api/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(stocks)
+                    body: JSON.stringify(requestData)
                 });
 
                 const result = await response.json();
                 
                 if (result.success) {
-                    showStatus(`✅ 데이터가 성공적으로 저장되었습니다! 파일: ${result.filename}`);
+                    showStatus(`✅ 데이터가 성공적으로 저장되었습니다!\n파일: ${result.filename}\n경로: ${result.path}`);
                     toggleSaveSection();
+                    // 입력 필드 초기화
+                    document.getElementById('saveFilename').value = '';
+                    document.getElementById('savePath').value = '';
                 } else {
-                    showStatus(`❌ 저장 실패: ${result.error}`, true);
+                    showStatus(`⌛ 저장 실패: ${result.error}`, true);
                 }
             } catch (error) {
-                showStatus(`❌ 저장 중 오류 발생: ${error.message}`, true);
+                showStatus(`⌛ 저장 중 오류 발생: ${error.message}`, true);
+            }
+        }
+
+        // 커스텀 경로에서 파일 불러오기
+        async function loadFromCustomPath() {
+            const filePath = document.getElementById('customFilePath').value.trim();
+            
+            if (!filePath) {
+                showStatus('파일 경로를 입력해주세요.', true);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/load_file', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ file_path: filePath })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    stocks = result.data;
+                    saveToLocalStorage();
+                    renderTable();
+                    showStatus(`✅ 데이터가 성공적으로 불러와졌습니다!\n파일: ${result.filename}\n경로: ${result.path}`);
+                    toggleLoadSection();
+                    document.getElementById('customFilePath').value = '';
+                } else {
+                    showStatus(`⌛ 불러오기 실패: ${result.error}`, true);
+                }
+            } catch (error) {
+                showStatus(`⌛ 불러오기 중 오류 발생: ${error.message}`, true);
             }
         }
 
@@ -938,10 +1133,10 @@ def create_html_file():
                 if (result.success) {
                     displayFileList(result.files);
                 } else {
-                    showStatus(`❌ 파일 목록 로드 실패: ${result.error}`, true);
+                    showStatus(`⌛ 파일 목록 로드 실패: ${result.error}`, true);
                 }
             } catch (error) {
-                showStatus(`❌ 파일 목록 로드 중 오류: ${error.message}`, true);
+                showStatus(`⌛ 파일 목록 로드 중 오류: ${error.message}`, true);
             }
         }
 
@@ -962,6 +1157,7 @@ def create_html_file():
                             크기: ${(file.size / 1024).toFixed(1)}KB | 
                             수정일: ${file.modified}
                         </div>
+                        <div class="path-display">${file.path}</div>
                     </div>
                 </div>
             `).join('');
@@ -1001,15 +1197,15 @@ def create_html_file():
                 
                 if (result.success) {
                     stocks = result.data;
-                    saveToLocalStorage(); // 로컬 스토리지에도 저장
+                    saveToLocalStorage();
                     renderTable();
                     showStatus(`✅ 데이터가 성공적으로 불러와졌습니다! 파일: ${result.filename}`);
                     toggleLoadSection();
                 } else {
-                    showStatus(`❌ 불러오기 실패: ${result.error}`, true);
+                    showStatus(`⌛ 불러오기 실패: ${result.error}`, true);
                 }
             } catch (error) {
-                showStatus(`❌ 불러오기 중 오류 발생: ${error.message}`, true);
+                showStatus(`⌛ 불러오기 중 오류 발생: ${error.message}`, true);
             }
         }
         
@@ -1060,10 +1256,10 @@ def create_html_file():
                     renderTable();
                     showStatus(`✅ ${updatedCount}개 주식의 현재가가 업데이트되었습니다.`);
                 } else {
-                    showStatus(`❌ 현재가 업데이트 실패: ${result.error}`, true);
+                    showStatus(`⌛ 현재가 업데이트 실패: ${result.error}`, true);
                 }
             } catch (error) {
-                showStatus(`❌ 현재가 업데이트 중 오류 발생: ${error.message}`, true);
+                showStatus(`⌛ 현재가 업데이트 중 오류 발생: ${error.message}`, true);
             }
         }
         
@@ -1371,7 +1567,7 @@ def run_server():
             print(f"📱 브라우저에서 http://localhost:{PORT} 접속하세요")
             print(f"🔗 또는 http://127.0.0.1:{PORT} 접속하세요")
             print(f"💾 데이터 파일 저장 위치: {data_dir.absolute()}")
-            print(f"⏹️  서버를 종료하려면 Ctrl+C를 누르세요")
+            print(f"ℹ️  서버를 종료하려면 Ctrl+C를 누르세요")
             print("-" * 60)
             
             # 자동으로 브라우저 열기
@@ -1388,15 +1584,15 @@ def run_server():
         print("\n")
         print("🛑 서버가 종료되었습니다.")
         print("📄 생성된 파일들은 그대로 유지됩니다.")
-        print(f"📁 데이터 파일 위치: {Path('stock_data').absolute()}")
+        print(f"📂 데이터 파일 위치: {Path('stock_data').absolute()}")
     except OSError as e:
         if e.errno == 48 or "Address already in use" in str(e):
-            print(f"❌ 포트 {PORT}가 이미 사용 중입니다.")
+            print(f"⌛ 포트 {PORT}가 이미 사용 중입니다.")
             print(f"💡 다른 포트를 사용해보세요: python server.py --port 8001")
         else:
-            print(f"❌ 서버 시작 중 오류 발생: {e}")
+            print(f"⌛ 서버 시작 중 오류 발생: {e}")
     except Exception as e:
-        print(f"❌ 예상치 못한 오류 발생: {e}")
+        print(f"⌛ 예상치 못한 오류 발생: {e}")
 
 if __name__ == "__main__":
     # yfinance 라이브러리 설치 안내
@@ -1414,12 +1610,12 @@ if __name__ == "__main__":
         try:
             PORT = int(sys.argv[2])
         except ValueError:
-            print("❌ 올바른 포트 번호를 입력하세요.")
+            print("⌛ 올바른 포트 번호를 입력하세요.")
             sys.exit(1)
     
     print("=" * 60)
-    print("📈 주식 매매 관리 시스템 by KP ")
+    print("📈 주식 매매 관리 시스템 v2.0 (개선된 파일 관리)")
     print("=" * 60)
     
     run_server()
-
+        
