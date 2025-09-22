@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주식 매매 관리 시스템</title>
     <style>
+        /* ... (CSS code from the original file) ... */
         * {
             margin: 0;
             padding: 0;
@@ -521,7 +522,7 @@
             </div>
             <div class="form-group">
                 <label for="savePath">저장 경로 (선택사항)</label>
-                <input type="text" id="savePath" class="form-input" placeholder="예: C:\Users\사용자명\Documents (기본값: stock_data 폴더)" />
+                <input type="text" id="savePath" class="form-input" placeholder="예: C:\\Users\\사용자명\\Documents (기본값: stock_data 폴더)" />
                 <div class="path-display">기본 경로를 사용하려면 비워두세요. 절대 경로 또는 상대 경로를 입력할 수 있습니다.</div>
             </div>
             <div class="form-row">
@@ -558,7 +559,7 @@
             <div id="customLoadSection" style="display: none;">
                 <div class="form-group">
                     <label for="customFilePath">파일 경로</label>
-                    <input type="text" id="customFilePath" class="form-input" placeholder="예: C:\Users\사용자명\Documents\내_주식_데이터.json" />
+                    <input type="text" id="customFilePath" class="form-input" placeholder="예: C:\\Users\\사용자명\\Documents\\내_주식_데이터.json" />
                     <div class="path-display">JSON 파일의 전체 경로를 입력하세요.</div>
                 </div>
                 <div class="form-row">
@@ -849,9 +850,7 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showStatus(`✅ 데이터가 성공적으로 저장되었습니다!
-파일: ${result.filename}
-경로: ${result.path}`);
+                    showStatus(`✅ 데이터가 성공적으로 저장되었습니다!\n파일: ${result.filename}\n경로: ${result.path}`);
                     toggleSaveSection();
                     // 입력 필드 초기화
                     document.getElementById('saveFilename').value = '';
@@ -888,9 +887,7 @@
                     stocks = result.data;
                     saveToLocalStorage();
                     renderTable();
-                    showStatus(`✅ 데이터가 성공적으로 불러와졌습니다!
-파일: ${result.filename}
-경로: ${result.path}`);
+                    showStatus(`✅ 데이터가 성공적으로 불러와졌습니다!\n파일: ${result.filename}\n경로: ${result.path}`);
                     toggleLoadSection();
                     document.getElementById('customFilePath').value = '';
                 } else {
