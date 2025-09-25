@@ -27,6 +27,8 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
             self.update_prices()
         elif self.path == '/api/update_exchange_rate': # 환율 자동 업데이트 추가
             self.update_exchange_rate()
+        elif self.path == '/api/exit': # Exit Program
+            self.exit_program()
         else:
             self.send_error(404)
     
@@ -91,6 +93,18 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             error_response = {"success": False, "error": str(e)}
             self.send_json_response(error_response, 500)
+
+    def exit_program(self):
+        """Exit the program safely"""
+        print("\n")
+        print("🛑 Received exit request. Shutting down the server...")
+        self.send_json_response({"success": True})
+        # This will raise a KeyboardInterrupt to stop the server loop.
+        # It mimics a manual Ctrl+C press.
+        import threading
+        threading.Thread(target=self.server.shutdown).start()
+
+
 
     def save_data(self):
         """Save data to a JSON file (supports custom filename)"""
