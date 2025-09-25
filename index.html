@@ -570,6 +570,7 @@
 <script>
 
 	// ### 통합 JavaScript 시작 ###
+    // { id, name, stockCode, purchasePrice, currentPrice, highPoint, lastUpdated, prevPrice }
     let stocks = [];
     let tradingLog = [];
     let editingId = null;
@@ -950,6 +951,11 @@
         if (stocks.length === 0) return showStatus('업데이트할 주식이 없습니다.', true);
         showStatus('🔄 현재가를 업데이트 중입니다...', false);
         try {
+            // 업데이트 전 기존 현재가를 prevPrice에 백업
+            stocks.forEach(stock => {
+                stock.prevPrice = stock.currentPrice;
+            });
+
             const stockCodes = stocks.map(stock => stock.stockCode);
             const response = await fetch('/api/update_prices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stock_codes: stockCodes, exchange_rate: exchangeRate }) });
             const result = await response.json();
@@ -959,7 +965,9 @@
                     const newPrice = updatedPrices[stock.stockCode];
                     if (newPrice !== null && newPrice !== undefined) {
                         stock.currentPrice = newPrice;
-                        if (newPrice > stock.highPoint) stock.highPoint = newPrice;
+                        if (newPrice > stock.highPoint) {
+                            stock.highPoint = newPrice;
+                        }
                         stock.lastUpdated = new Date().toLocaleString();
                     }
                 });
@@ -1020,7 +1028,8 @@
 				currentPrice: 
 				purchasePrice, 
 				highPoint: purchasePrice, 
-				lastUpdated: new Date().toLocaleString() 
+				lastUpdated: new Date().toLocaleString(),
+				prevPrice
 			}
 		);
         saveToLocalStorage();
@@ -1078,6 +1087,9 @@
                     if (newPrice > stock.purchasePrice && newPrice > stock.highPoint) {
                         newHighPoint = newPrice;
                     }
+
+	                // 수동 입력 시에도 prevPrice 업데이트
+    	            stock.prevPrice = stock.currentPrice;
 
                     return {
                         ...stock,
@@ -1180,88 +1192,115 @@
 
     // --- 테이블 렌더링 함수 ---
     function renderTable() {
-            const tbody = document.getElementById('stockTableBody');
-            const emptyState = document.getElementById('emptyState');
+        const tbody = document.getElementById('stockTableBody');
+        const emptyState = document.getElementById('emptyState');
 
-            if (stocks.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.style.display = 'block';
-                return;
+        if (stocks.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        
+        tbody.innerHTML = stocks.map(stock => {
+            const { sellPrice, buyMorePrice, profitLoss, opinion } = calculateMetrics(stock);
+            
+            const profitAmount = stock.currentPrice - stock.purchasePrice;
+            const profitRate = ((stock.currentPrice - stock.purchasePrice) / stock.purchasePrice * 100).toFixed(2);
+            
+            // 추가된 로직: 현재가 변동 및 고점 대비 변동 계산
+            let priceChangeIcon = '';
+            let highPointChangeText = '';
+
+            if (stock.prevPrice !== undefined && stock.currentPrice !== stock.prevPrice) {
+                if (stock.currentPrice > stock.prevPrice) {
+                    priceChangeIcon = '🔺'; // 상승
+                } else if (stock.currentPrice < stock.prevPrice) {
+                    priceChangeIcon = '🔻'; // 하락
+                }
             }
 
-            emptyState.style.display = 'none';
-            
-            tbody.innerHTML = stocks.map(stock => {
-                const { sellPrice, buyMorePrice, profitLoss, opinion } = calculateMetrics(stock);
-                
-                const profitAmount = stock.currentPrice - stock.purchasePrice;
-                const profitRate = ((stock.currentPrice - stock.purchasePrice) / stock.purchasePrice * 100).toFixed(2);
-                
-                return `
-                    <tr>
-                        <td contenteditable="true" onblur="updateStockName(${stock.id}, this)"><strong>${stock.name}</strong></td>
-                        <td contenteditable="true" onblur="updateStockCode(${stock.id}, this)">${stock.stockCode}</td>
-                        <td class="text-right" contenteditable="true" onblur="updatePurchasePrice(${stock.id}, this)">
-                            ${stock.purchasePrice.toLocaleString()}원
-                        </td>
-                        <td class="text-right">
-                            ${editingId === stock.id ? `
-                                <div class="update-form">
-                                    <input type="number" id="update-${stock.id}" class="update-input" 
-                                           placeholder="${stock.currentPrice}" />
-                                    <button class="btn btn-primary" onclick="updateCurrentPrice(${stock.id})">확인</button>
-                                    <button class="btn btn-secondary" onclick="cancelEdit()">취소</button>
-                                </div>
-                            ` : `
-                                <div class="price-info">
-                                    <div class="${stock.currentPrice >= stock.purchasePrice ? 'text-green' : 'text-red'}">
-                                        ${stock.currentPrice.toLocaleString()}원
-                                        <span class="update-icon" onclick="startEdit(${stock.id})" title="수동 입력">✏️</span>
-                                    </div>
-                                    <div class="small-text ${profitAmount >= 0 ? 'text-green' : 'text-red'}">
-                                        (${profitAmount >= 0 ? '+' : ''}${profitAmount.toLocaleString()}원, ${profitRate}%)
-                                    </div>
-                                </div>
-                            `}
-                        </td>
-                        <td class="text-right">
-                            <div class="text-purple">${stock.highPoint.toLocaleString()}원</div>
-                            ${stock.highPoint > stock.purchasePrice ? `
-                                <div class="small-text text-purple">
-                                    (+${((stock.highPoint - stock.purchasePrice) / stock.purchasePrice * 100).toFixed(1)}%)
-                                </div>
-                            ` : ''}
-                        </td>
-                        <td class="text-right">
-                            <div class="text-red">${sellPrice.toLocaleString()}원</div>
-                            <div class="small-text text-red">(고점 -${sellPercentage}%)</div>
-                        </td>
-                        <td class="text-right">
-                            <div class="text-blue">${buyMorePrice.toLocaleString()}원</div>
-                            <div class="small-text text-blue">(고점 -${buyMorePercentage}%)</div>
-                        </td>
-                        <td class="text-center ${profitLoss === '이익' ? 'text-green' : 'text-red'}">
-                            <div>${profitLoss}</div>
-                            <div class="small-text">${Math.abs(profitAmount).toLocaleString()}원</div>
-                        </td>
-                        <td class="text-center ${
-                            opinion === '매수' ? 'text-blue' : 
-                            opinion === '매도' ? 'text-red' : 'text-gray'
-                        }">
-                            <div>${opinion}</div>
-                            <div class="small-text">
-                                ${opinion === '매수' ? '추가 매수 구간' : 
-                                  opinion === '매도' ? '매도 구간' : '관망 구간'}
+            if (stock.currentPrice > stock.purchasePrice) {
+                const highPointDiff = stock.highPoint - stock.currentPrice;
+                const highPointChange = (highPointDiff / stock.highPoint * 100).toFixed(1);
+
+                if (highPointDiff > 0) {
+                    highPointChangeText = `(고점 대비 -${highPointChange}%)`;
+                } else {
+                    highPointChangeText = `(고점 경신)`;
+                }
+            }
+
+
+            return `
+                <tr>
+                    <td contenteditable="true" onblur="updateStockName(${stock.id}, this)"><strong>${stock.name}</strong></td>
+                    <td contenteditable="true" onblur="updateStockCode(${stock.id}, this)">${stock.stockCode}</td>
+                    <td class="text-right" contenteditable="true" onblur="updatePurchasePrice(${stock.id}, this)">
+                        ${stock.purchasePrice.toLocaleString()}원
+                    </td>
+                    <td class="text-right">
+                        ${editingId === stock.id ? `
+                            <div class="update-form">
+                                <input type="number" id="update-${stock.id}" class="update-input" 
+                                       placeholder="${stock.currentPrice}" />
+                                <button class="btn btn-primary" onclick="updateCurrentPrice(${stock.id})">확인</button>
+                                <button class="btn btn-secondary" onclick="cancelEdit()">취소</button>
                             </div>
-                        </td>
-                        <td class="text-center">
-                            <div class="management-column">
-								<button class="btn btn-primary" onclick="openManagementView(${stock.id})">관리</button>
+                        ` : `
+                            <div class="price-info">
+                                <div class="${stock.currentPrice >= stock.purchasePrice ? 'text-green' : 'text-red'}">
+                                    ${stock.currentPrice.toLocaleString()}원 ${priceChangeIcon}
+                                    <span class="update-icon" onclick="startEdit(${stock.id})" title="수동 입력">✏️</span>
+                                </div>
+                                <div class="small-text ${profitAmount >= 0 ? 'text-green' : 'text-red'}">
+                                    (${profitAmount >= 0 ? '+' : ''}${profitAmount.toLocaleString()}원, ${profitRate}%)
+                                </div>
+                                <div class="small-text text-gray">
+                                    ${highPointChangeText}
+                                </div>
                             </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+                        `}
+                    </td>
+                    <td class="text-right">
+                        <div class="text-purple">${stock.highPoint.toLocaleString()}원</div>
+                        ${stock.highPoint > stock.purchasePrice ? `
+                            <div class="small-text text-purple">
+                                (+${((stock.highPoint - stock.purchasePrice) / stock.purchasePrice * 100).toFixed(1)}%)
+                            </div>
+                        ` : ''}
+                    </td>
+                    <td class="text-right">
+                        <div class="text-red">${sellPrice.toLocaleString()}원</div>
+                        <div class="small-text text-red">(고점 -${sellPercentage}%)</div>
+                    </td>
+                    <td class="text-right">
+                        <div class="text-blue">${buyMorePrice.toLocaleString()}원</div>
+                        <div class="small-text text-blue">(고점 -${buyMorePercentage}%)</div>
+                    </td>
+                    <td class="text-center ${profitLoss === '이익' ? 'text-green' : 'text-red'}">
+                        <div>${profitLoss}</div>
+                        <div class="small-text">${Math.abs(profitAmount).toLocaleString()}원</div>
+                    </td>
+                    <td class="text-center ${
+                        opinion === '매수' ? 'text-blue' : 
+                        opinion === '매도' ? 'text-red' : 'text-gray'
+                    }">
+                        <div>${opinion}</div>
+                        <div class="small-text">
+                            ${opinion === '매수' ? '추가 매수 구간' : 
+                              opinion === '매도' ? '매도 구간' : '관망 구간'}
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <div class="management-column">
+                            <button class="btn btn-primary" onclick="openManagementView(${stock.id})">관리</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
     function renderTradingLog() {
