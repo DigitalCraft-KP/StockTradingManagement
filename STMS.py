@@ -99,7 +99,7 @@ class StockDataHandler(http.server.SimpleHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             request_data = json.loads(post_data.decode('utf-8'))
             
-            data = request_data.get('data', [])
+            data = request_data.get('data', {}) # 수정: 데이터가 JSON 객체 형태로 들어옴
             custom_filename = request_data.get('filename', '')
             save_path = request_data.get('save_path', '')
             
