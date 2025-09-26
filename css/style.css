@@ -201,6 +201,26 @@ select {
     white-space: nowrap;
 }
 
+/* 추가된 변동 정보 스타일 */
+.change-info-cell {
+    font-size: 0.9em; /* 폰트 크기 조정 */
+    line-height: 1.3; /* 줄 간격 조정 */
+}
+
+/* 변동 아이콘 스타일 */
+.price-icon {
+    margin-right: 7px;
+    font-weight: bold;
+}
+
+/* 고점 대비 변동률 텍스트 스타일 */
+.high-point-change-text {
+    display: block; /* 줄바꿈 */
+    font-size: 0.8em;
+    color: #6c757d; /* 회색으로 표시 */
+}
+
+
 .table-container {
     overflow-x: auto;
     margin-bottom: 30px;
@@ -256,6 +276,8 @@ tr:hover {
     color: #fd7e14;
     font-weight: 600;
 }
+.text-green-dark { color: #155724; }
+.text-red-dark { color: #721c24; }
 .text-purple { color: #6f42c1; font-weight: 600; }
 .text-gray { color: #6c757d; font-weight: 600; }
 .small-text { font-size: 12px; opacity: 0.8; }

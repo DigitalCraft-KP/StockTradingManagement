@@ -623,7 +623,48 @@ function renderTable() {
             
             const profitAmount = stock.currentPrice - stock.purchasePrice;
             const profitRate = ((stock.currentPrice - stock.purchasePrice) / stock.purchasePrice * 100).toFixed(2);
+        // --- 새로운 변동 정보 계산 로직 ---
+        let priceChangeIcon = '';
+        let highPointChangeText = '';
+        let highPointChangeClass = 'text-gray';
+
+        // 1. 직전가 대비 상승/하락 아이콘 결정
+        if (stock.prevPrice !== undefined && stock.currentPrice !== stock.prevPrice) {
+            if (stock.currentPrice > stock.prevPrice) {
+                priceChangeIcon = '<span class="price-icon text-green">🔺</span>'; // 상승
+            } else if (stock.currentPrice < stock.prevPrice) {
+                priceChangeIcon = '<span class="price-icon text-red">🔻</span>'; // 하락
+            }
+			else {
+                priceChangeIcon = '<span class="price-icon text-gray"> - </span>'; // 유지
+			}
+        }
+        
+        // 2. 고점 대비 변동 계산
+        if (stock.currentPrice > stock.highPoint) {
+            // 고점 경신 (로직상 고점 업데이트는 updateAllPrices/updateStockPrice에서 처리됨)
+            highPointChangeText = '고점 경신 🎉';
+            highPointChangeClass = 'text-green-dark';
+        //} else if (stock.highPoint > 0) {
+        } else {
+        	if (stock.highPoint > 0) {
+				const highPointDiffRate = ((stock.currentPrice - stock.highPoint) / stock.highPoint * 100).toFixed(1);
             
+            	if (highPointDiffRate < 0) {
+                	// 고점 대비 하락률 표시
+                	highPointChangeText = `고점 대비 ${highPointDiffRate}%`;
+               		highPointChangeClass = 'text-red-dark';
+            	} else {
+                	// 현재가 == 고점 이거나, 0%에 근접할 경우
+                	highPointChangeText = `고점 대비 0.0%`;
+                	highPointChangeClass = 'text-gray';
+            	}
+			}
+			else {
+            	highPointChangeText = `ERROR`;
+            	highPointChangeClass = 'text-red';
+			}
+        }
             return `
                 <tr>
                     <td contenteditable="true" onblur="updateStockName(${stock.id}, this)"><strong>${stock.name}</strong></td>
@@ -651,6 +692,12 @@ function renderTable() {
                             </div>
                         `}
                     </td>
+                <td class="text-center change-info-cell">
+                    <div>${priceChangeIcon || '-'}</div>
+                    <div class="${highPointChangeClass} high-point-change-text">
+                        ${highPointChangeText || '기록 없음'}
+                    </div>
+                </td>
                     <td class="text-right">
                         <div class="text-purple">${stock.highPoint.toLocaleString()}원</div>
                         ${stock.highPoint > stock.purchasePrice ? `
