@@ -9,7 +9,7 @@
 
 <body>	
 	<script src="js/script.js"></script>
-    <div class="container">
+	<div class="container">
         <div class="header">
             <h1>주식 매매 관리 시스템V2.0 </h1>
             <div class="header-controls">
@@ -27,6 +27,7 @@
             <span class="settings-info" id="currentSettings"></span>
         </div>
 
+		<!-- Save Data -->
         <div id="saveSection" class="form-section hidden">
             <div class="form-title">💾 데이터 저장
 			</div>
@@ -46,6 +47,7 @@
 			</div>
         </div>
 
+		<!-- Load Data explorer -->
         <div id="loadSection" class="form-section hidden">
             <div class="form-title">📂 데이터 불러오기</div>
             <div class="load-options">
@@ -58,79 +60,133 @@
 					<label for="loadFromCustom">파일 경로 직접 입력</label>
 				</div>
 			</div>
-            <div id="defaultLoadSection"><div style="margin-bottom: 15px;"><p>저장된 파일 목록에서 불러올 파일을 선택하세요.</p></div><div class="file-list" id="fileList"></div><div class="form-row" style="margin-top: 15px;"><button class="btn btn-primary" onclick="loadSelectedFile()" id="loadBtn" disabled>선택한 파일 불러오기</button><button class="btn btn-secondary" onclick="refreshFileList()">목록 새로고침</button></div></div>
-            <div id="customLoadSection" style="display: none;"><div class="form-group"><label for="customFilePath">파일 경로</label><input type="text" id="customFilePath" class="form-input" placeholder="예: C:\\...\\내_주식.json" /><div class="path-display">JSON 파일의 전체 경로를 입력하세요.</div></div><div class="form-row"><button class="btn btn-primary" onclick="loadFromCustomPath()">파일 불러오기</button></div></div>
-            <div class="form-row" style="margin-top: 15px;">
+            <div id="defaultLoadSection">
+			<div style="margin-bottom: 15px;">
+				<p>저장된 파일 목록에서 불러올 파일을 선택하세요.</p>
+			</div>
+			<div class="file-list" id="fileList"></div>
+			<div class="form-row" style="margin-top: 15px;">
+				<button class="btn btn-primary" onclick="loadSelectedFile()" id="loadBtn" disabled>선택한 파일 불러오기</button>
+				<button class="btn btn-secondary" onclick="refreshFileList()">목록 새로고침</button>
+			</div>
+		</div>
+
+		<!-- Load Data path -->
+		<div id="customLoadSection" style="display: none;">
+			<div class="form-group">
+				<label for="customFilePath">파일 경로</label>
+				<input type="text" id="customFilePath" class="form-input" placeholder="예: C:\...\stock_data_YYYYMMDD_hhmmss.json" />
+				<div class="path-display">JSON 파일의 전체 경로를 입력하세요.</div>
+			</div>
+        	<div class="form-row" style="margin-top: 15px;">
+				<button class="btn btn-primary" onclick="loadFromCustomPath()">파일 불러오기</button>
 				<button class="btn btn-secondary" onclick="toggleLoadSection()">취소</button>
 			</div>
-        </div>
-        
-        <div id="settingsSection" class="form-section hidden">
-            <div class="form-title">🔈 매매 설정 및 환율</div>
-            <div class="setting-group"><label for="sellPercentageInput">매도 비율 (%)</label><input type="number" id="sellPercentageInput" class="form-input" value="8" min="1" max="100" /></div>
-            <div class="setting-group"><label for="buyMorePercentageInput">추가 매수 비율 (%)</label><input type="number" id="buyMorePercentageInput" class="form-input" value="5" min="1" max="100" /></div>
-            <div class="setting-group"><label for="exchangeRateInput">환율 (1 USD = ? KRW)</label><div style="display: flex; gap: 10px; align-items: center;"><input type="number" id="exchangeRateInput" class="form-input" value="1300" min="1" /><button class="btn btn-primary" onclick="updateExchangeRate()">자동 업데이트</button></div></div>
-            <button class="btn btn-secondary" onclick="toggleSettingsSection()">저장</button>
-        </div>
+		</div>
 
-        <div id="statusMessage" style="display: none;"></div>
 
-        <div id="addForm" class="form-section hidden">
-            <div class="form-title">새 주식 추가</div>
-            <div class="form-row">
-				<input type="text" id="stockName" class="form-input" placeholder="주식 이름" />
-				<input type="text" id="stockCode" class="form-input" placeholder="종목 코드 (예: 005930.KS)" />
-				<input type="number" id="purchasePrice" class="form-input" placeholder="매입가 (원화)" />
-				<button class="btn btn-success" onclick="addStock()">추가</button>
-				<button class="btn btn-secondary" onclick="toggleAddForm()">취소</button>
+
+
+
+
+	</div>
+	
+	<!-- Setting -->   
+    <div id="settingsSection" class="form-section hidden">
+    	<div class="form-title">🔈 매매 설정 및 환율</div>
+        <div class="setting-group">
+			<label for="sellPercentageInput">매도 비율 (%)</label>
+			<input type="number" id="sellPercentageInput" class="form-input" value="8" min="1" max="100" />
+		</div>
+        <div class="setting-group">
+			<label for="buyMorePercentageInput">추가 매수 비율 (%)</label>
+			<input type="number" id="buyMorePercentageInput" class="form-input" value="5" min="1" max="100" />
+		</div>
+        <div class="setting-group">
+			<label for="exchangeRateInput">환율 (1 USD = ? KRW)</label>
+			<div style="display: flex; gap: 10px; align-items: center;">
+				<input type="number" id="exchangeRateInput" class="form-input" value="1300" min="1" />
+				<button class="btn btn-primary" onclick="updateExchangeRate()">자동 업데이트</button>
 			</div>
-        </div>
+		</div>
+        <button class="btn btn-secondary" onclick="toggleSettingsSection()">저장</button>
+    </div>
 
-        <div class="tab-container">
-            <button id="tabBtnStocks" class="tab-button active" onclick="showTab('stocks')">📈 보유 주식 목록</button>
-            <button id="tabBtnLog" class="tab-button" onclick="showTab('log')">📝 주식 매매 일지</button>
-        </div>
+	<!-- Status Message -->   
+    <div id="statusMessage" style="display: none;"></div>
 
-        <div id="tabContentStocks" class="tab-content active">
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>주식 이름</th>
-							<th>종목 코드</th>
-							<th class="text-right">매입가</th>
-							<th class="text-right">현재가</th>
-							<th class="text-right">고점</th>
-							<th class="text-right">매도</th>
-							<th class="text-right">추가매수</th>
-							<th class="text-center">손익</th>
-							<th class="text-center">의견</th>
-							<th class="text-center">관리</th>
-                        </tr>
-                    </thead>
-                    <tbody id="stockTableBody"></tbody>
-                </table>
-            </div>
-            <div id="emptyState" class="empty-state">
+	<!-- Add new stock -->   	
+    <div id="addForm" class="form-section hidden">
+        <div class="form-title">새 주식 추가</div>
+        <div class="form-row">
+			<input type="text" id="stockName" class="form-input" placeholder="주식 이름" />
+			<input type="text" id="stockCode" class="form-input" placeholder="종목 코드 (예: 005930.KS)" />
+			<input type="number" id="purchasePrice" class="form-input" placeholder="매입가 (원화)" />
+			<button class="btn btn-success" onclick="addStock()">추가</button>
+			<button class="btn btn-secondary" onclick="toggleAddForm()">취소</button>
+		</div>
+    </div>
+
+		<!-- Container -->   	
+   		<div class="tab-container">
+        	<button id="tabBtnStocks" class="tab-button active" onclick="showTab('stocks')">📈 보유 주식 목록</button>
+        	<button id="tabBtnLog" class="tab-button" onclick="showTab('log')">📝 주식 매매 일지</button>
+    	</div>
+
+		<!-- Container : Stock Table -->   	
+    	<div id="tabContentStocks" class="tab-content active">
+        	<div class="table-container">
+           		<table>
+                	<thead>
+                    <tr>
+                        <th>종목명</th>
+						<th>종목 코드</th>
+						<th class="text-right">매입가</th>
+						<th class="text-right">현재가</th>
+						<th class="text-center">변동 정보</th>
+						<th class="text-right">고점</th>
+						<th class="text-right">매도</th>
+						<th class="text-right">추가매수</th>
+						<th class="text-center">손익</th>
+						<th class="text-center">의견</th>
+						<th class="text-center">관리</th>
+                    </tr>
+                	</thead>
+                <tbody id="stockTableBody"></tbody>
+            	</table>
+        	</div>
+        	<div id="emptyState" class="empty-state">
 				<h3>등록된 주식이 없습니다</h3>
 				<p>주식을 추가하거나 저장된 파일을 불러와서 매매 관리를 시작하세요.</p>
 			</div>
-        </div>
+    	</div>
 
-        <div id="tabContentLog" class="tab-content">
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>매매 날짜</th><th>주식명</th><th>종목 코드</th><th class="text-right">매입가</th><th class="text-right">매도가</th><th class="text-right">손익</th><th>매매 이유</th></tr></thead>
-                    <tbody id="tradingLogBody"></tbody>
-                </table>
-            </div>
-            <div id="tradingLogEmptyState" class="empty-state"><h3>매매 기록이 없습니다.</h3></div>
+	<!-- Container : Log Table -->
+    <div id="tabContentLog" class="tab-content">
+        <div class="table-container">
+            <table>
+                <thead>
+					<tr>
+						<th>매매 날짜</th>
+						<th>주식명</th>
+						<th>종목 코드</th>
+						<th class="text-right">매입가</th>
+						<th class="text-right">매도가</th>
+						<th class="text-right">손익</th>
+						<th>매매 이유</th>
+					</tr>
+				</thead>
+                <tbody id="tradingLogBody"></tbody>
+            </table>
         </div>
+        <div id="tradingLogEmptyState" class="empty-state"><h3>매매 기록이 없습니다.</h3></div>
+    </div>
 
-        <div class="help-section">
-            <div class="help-title">사용 가이드</div>
-            <div class="help-content">
-				<div class="help-item"><strong>1. 탭 전환</strong>: '보유 주식 목록'과 '주식 매매 일지' 탭을 클릭하여 화면을 전환할 수 있습니다.</div>
+	<!-- Help Section -->
+    <div class="help-section">
+        <div class="help-title">사용 가이드</div>
+        <div class="help-content">
+			<div class="help-item"><strong>1. 탭 전환</strong>: '보유 주식 목록'과 '주식 매매 일지' 탭을 클릭하여 화면을 전환할 수 있습니다.</div>
 				<div class="help-item"><strong>2. 매매 설정 및 환율</strong>: ⚙️ 설정 버튼을 눌러 매도 및 추가 매수 비율을 설정할 수 있고, 미국 주식 매매를 위해 환율을 설정할 수 있습니다.</div>
                 <div class="help-item"><strong>3. 파일 저장</strong>: 💾 저장 버튼으로 현재 데이터를 .json 파일로 저장할 수 있습니다. 파일명과 저장 경로를 자유롭게 지정할 수 있습니다.</div>
                 <div class="help-item"><strong>4. 파일 불러오기</strong>: 📂 불러오기 버튼으로 기본 폴더의 파일을 선택하거나, 임의의 경로에서 직접 파일을 불러올 수 있습니다.</div>
@@ -145,6 +201,7 @@
         </div>
     </div>
 
+	<!-- Stock Management -->
     <div id="managementModal" class="modal-backdrop" style="display: none;">
         <div class="modal-content">
             <div class="modal-header"><h3 class="modal-title">주식 매매 일지 작성</h3>
@@ -172,6 +229,7 @@
         </div>
     </div>
 
+	<!-- Exit Program -->
 	<div id="exitModal" class="modal-backdrop" style="display: none;">
 	    <div class="modal-content">
     	    <div class="modal-header">
