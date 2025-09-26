@@ -623,6 +623,7 @@ function renderTable() {
             
             const profitAmount = stock.currentPrice - stock.purchasePrice;
             const profitRate = ((stock.currentPrice - stock.purchasePrice) / stock.purchasePrice * 100).toFixed(2);
+
         // --- 새로운 변동 정보 계산 로직 ---
         let priceChangeIcon = '';
         let highPointChangeText = '';
@@ -665,6 +666,7 @@ function renderTable() {
             	highPointChangeClass = 'text-red';
 			}
         }
+
             return `
                 <tr>
                     <td contenteditable="true" onblur="updateStockName(${stock.id}, this)"><strong>${stock.name}</strong></td>
@@ -692,12 +694,14 @@ function renderTable() {
                             </div>
                         `}
                     </td>
+
                 <td class="text-center change-info-cell">
                     <div>${priceChangeIcon || '-'}</div>
                     <div class="${highPointChangeClass} high-point-change-text">
                         ${highPointChangeText || '기록 없음'}
                     </div>
                 </td>
+
                     <td class="text-right">
                         <div class="text-purple">${stock.highPoint.toLocaleString()}원</div>
                         ${stock.highPoint > stock.purchasePrice ? `

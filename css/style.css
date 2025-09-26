@@ -221,6 +221,7 @@ select {
 }
 
 
+
 .table-container {
     overflow-x: auto;
     margin-bottom: 30px;
@@ -276,6 +277,7 @@ tr:hover {
     color: #fd7e14;
     font-weight: 600;
 }
+
 .text-green-dark { color: #155724; }
 .text-red-dark { color: #721c24; }
 .text-purple { color: #6f42c1; font-weight: 600; }
